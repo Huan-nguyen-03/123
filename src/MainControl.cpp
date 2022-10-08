@@ -8,17 +8,18 @@ MainControl::MainControl()
 
     window = NULL;
     renderer = NULL;
-    end_loop = false;
-    fire = false;
-    checkCol = false;
+    // end_loop = false;
+    // fire = false;
+    // checkCol = false;
     
-    status = GO_RIGHT;
-    eventRepeat = 0;
+    // status = GO_RIGHT;
+    // eventRepeat = 0;
     
-    dx = 0;
-    cnt_figure = 3;
-    cnt_explosion = 0;
-    
+    // dx = 0;
+    // cnt_figure = 3;
+    // cnt_explosion = 0;
+    turn = true;
+    convertTurn = 0;
 }
 
 MainControl::~MainControl() 
@@ -66,7 +67,12 @@ void MainControl::initSDL(SDL_Window* &window, SDL_Renderer* &renderer)
         SDL_Log("%s", TTF_GetError());
     }
 
-
+     //Initialize SDL_mixer
+    if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 )
+    {
+        printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
+        
+    }
 
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
     SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -107,98 +113,117 @@ SDL_Renderer* MainControl::getRenderer()const
 void MainControl::run()
 {
     initSDL(window, renderer);
+    player1.loadMedia(renderer);
+    player2.loadMedia(renderer);
     map.loadMap(renderer);
-    figure.loadMedia(renderer);
-    explosion.loadExplosion(renderer);
-        
-    while (true)
+    turnImage.loadTurnImage(renderer);
+    start.loadStart(renderer);
+    end.loadEnd(renderer);
+    start.handleEvent(renderer, e, play);
+    
+    
+    sound.loadMedia();
+    if (!play)
     {
-        while(SDL_PollEvent(&e) != 0)
-        {
-            if(e.type == SDL_QUIT)
-                close();
-            figure.handleEvent(e, status);           
-            bullet.handleEvent(e, eventRepeat, fire);
-            
-        }
-        map.renderTexture(0, renderer, 0, 0);
-        figure.showFigure(renderer, status);
-        bullet.loadBullet(renderer);
-        if (fire)
-        {
-            figure.showFigureFire(renderer, status, cnt_figure);
-            showTrajectory(bullet.getAngle(), bullet.getForce(), dx, figure.getX(0), figure.getY(0), status);
-            cnt_figure = min((cnt_figure + 1), 4);
-        }
-
-        if (checkCol)
-        {
-            showAllExplosion();
-        }
-        SDL_RenderPresent(renderer);
-        SDL_Delay(15);
-
+        close();
+        return;
     }
+    else
+    {
+        while(play)
+        {
+            sound.showMusic(1);
+            while(player1.checkDead() == false && player2.checkDead() == false)
+            {
+                startTime = SDL_GetTicks();
+                map.renderTexture(0, renderer, 0, 0);
+                while(SDL_PollEvent(&e) != 0)
+                {
+                    if (e.type == SDL_QUIT)
+                    {
+                        close();
+                        return;
+                    }
+                    if (turn)
+                        player1.handleEvent(e, turn);
+                    else
+                        player2.handleEvent(e, turn);
+                }
+                
+                if (turn)
+                {
+                    player1.show(renderer, player2.getPositionExplosion(), player2.minus, true, convertTurn);
+                    player2.show(renderer, player1.getPositionExplosion(), player1.minus, false, convertTurn);
+                }
+                else
+                {
+                    player2.show(renderer, player1.getPositionExplosion(), player1.minus, true, convertTurn);
+                    player1.show(renderer, player2.getPositionExplosion(), player2.minus, false, convertTurn);
+                }
+                
+                if (convertTurn == 1)
+                {
+                    turn = !turn;
+                    convertTurn = 0;
+                    turnImage.showTurnImage(0, renderer);
+                    SDL_RenderPresent(renderer);
+                    SDL_Delay(500);
+                }
+                else if (convertTurn == 2)
+                {
+                    turn = !turn;
+                    convertTurn = 0;
+                    turnImage.showTurnImage(1, renderer);
+                    SDL_RenderPresent(renderer);
+                    SDL_Delay(500);
+                }
+                else if (convertTurn == 3)
+                {
+                    convertTurn = 1;
+                }
+                else if (convertTurn == 4)
+                {
+                    convertTurn = 2;
+                }
+                else
+                {
+                    SDL_RenderPresent(renderer);
+
+                    endTime = SDL_GetTicks();
+                    if (endTime - startTime < 1000/FRAMES_PER_SECOND)
+                        SDL_Delay(1000/FRAMES_PER_SECOND - endTime + startTime);
+                }
+                
+            }
+            ///////////////////// dead, end game
+            if (player1.checkDead())
+            {
+                sound.haltMusic();
+                map.renderTexture(0, renderer, 0, 0);
+                player1.showDead(renderer);
+                player2.show(renderer, player1.getPositionExplosion(), player1.minus, false, convertTurn);
+            }
+            else
+            {
+                sound.haltMusic();
+                map.renderTexture(0, renderer, 0, 0);
+                player2.showDead(renderer);
+                player1.show(renderer, player1.getPositionExplosion(), player1.minus, false, convertTurn);
+            }
+            
+            SDL_RenderPresent(renderer);
+            SDL_Delay(2000);
+            
+            end.handleEvent(renderer, e, play);
+            player1.resetPlayer();
+            player2.resetPlayer();
+        }
+        
+    }
+
     
     
     waitUntilKeyPressed();
     close();
 
-}
-
-
-void MainControl::showTrajectory(int angle, int force, int & dx, int x, int y, int &status)
-{
-    double rad_angle = angle*1.0/180*M_PI;
-    // first position
-    int initialVelocity = force / 10;
-    int x_start;
-    int y_start;
-    if (status == GO_RIGHT)
-    {
-        x_start = x + 50;
-        y_start = y + 20;
-    }
-    else if (status == GO_LEFT)
-    {
-        x_start = x - 50;
-        y_start = y + 20;
-    }
-    
-    int x_pos = x_start;
-    int y_pos = y_start;
-    //
-    
-    
-    x_pos = x_start + dx;
-    y_pos = y_start - abs(dx)* tan(rad_angle) + 0.5 * GRAVITY * (dx / (initialVelocity * cos(rad_angle))) * (dx / (initialVelocity * cos(rad_angle)));
-    
-    bullet.showBullet(renderer, x_pos, y_pos);
-    
-    if (status == GO_RIGHT)
-        dx +=10;
-    if (status == GO_LEFT)
-        dx -= 10;
-    cout << x_pos << " " << y_pos << endl;
-
-    if (checkCollision(y_pos))
-    {
-        explosion.setX(x_pos);
-        explosion.setY(y_pos - 100);
-        fire = false;
-        checkCol = true;
-        dx = 0;
-        cnt_figure = 3;
-        cnt_explosion = 0;
-        figure.setCountFigure(0);
-    }
-   // SDL_Delay(10);
-}
-
-void MainControl::showAllExplosion()
-{
-    explosion.show(renderer, cnt_explosion);
-    cnt_explosion ++;
-    if (cnt_explosion == 4)
-        checkCol = false;
 }

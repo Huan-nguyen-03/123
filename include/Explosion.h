@@ -17,6 +17,9 @@ public:
     void loadExplosion(SDL_Renderer * renderer);
     void show(SDL_Renderer * renderer, int i);
 
+    int getX();
+    int getY();
+
     void setX(int i);
     void setY(int i);
 

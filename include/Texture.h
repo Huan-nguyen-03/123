@@ -61,15 +61,26 @@ public:
     void free(SDL_Texture*);                                                                    //hàm giải phóng tài nguyên
     void loadFromFile(string path, SDL_Renderer*);                                              //hàm load file ảnh
 
+    void loadFromRenderedText( TTF_Font * font, std::string textureText, SDL_Color textColor , SDL_Renderer * renderer);
+
     void renderTexture(int i, SDL_Renderer *ren, int x, int y);
     void render(int, int, int, SDL_Renderer*, double, SDL_Point*, SDL_RendererFlip);  //hàm render (dùng đc trong mọi điều kiện)
+    void render1part(int i, SDL_Renderer *ren, int x, int y, int w, int h);
+
     void setColor(const int &i, Uint8 red, Uint8 green, Uint8 blue);
     vector<SDL_Texture*> getTexture();
+
+
+    void setBlendMode(int i, SDL_BlendMode blending );
+    void setAlpha(int i, Uint8 alpha);
 
     int getWidth(int i);
     int getHeight(int i);
     float getX(int i);
     float getY(int i);
+
+    float setX(int i, int number);
+    float setY(int i, int number);
     vector <SDL_Rect> getCollider();
 
 protected:
@@ -77,6 +88,8 @@ protected:
     vector <float> x, y;
     vector <SDL_Texture*> texture;
     
+    
+
 
 private:
 

@@ -22,3 +22,5 @@ enum status
     GO_RIGHT, 
     GO_LEFT
 };
+
+const int FRAMES_PER_SECOND = 60;

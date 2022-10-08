@@ -24,7 +24,7 @@ Explosion :: ~Explosion()
     texture.shrink_to_fit();
 }
 
-void Explosion :: loadExplosion(SDL_Renderer * renderer)
+void Explosion :: loadExplosion(SDL_Renderer * renderer)        // animation of explosion
 {
     loadFromFile("images/explosion1.png", renderer);
     loadFromFile("images/explosion2.png", renderer);
@@ -38,6 +38,15 @@ void Explosion :: show(SDL_Renderer * renderer , int i)
 {
         renderTexture(i, renderer, x_exp, y_exp);
 
+}
+
+int Explosion::getX()
+{
+    return x_exp;
+}
+int Explosion::getY()
+{
+    return y_exp;
 }
 
 void Explosion:: setX(int i)
